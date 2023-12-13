@@ -13,6 +13,8 @@ defmodule Interpolation.Main do
   }
 
   def start(methods, window, frequency) do
+    Utils.register_process(:output, Output.start())
+
     workers =
       methods
       |> Enum.filter(&Map.has_key?(@methods, &1))
@@ -21,13 +23,14 @@ defmodule Interpolation.Main do
         Utils.register_process(method, mod.start(window, frequency))
       end)
 
-    Utils.register_process(:input, Input.start(workers))
-    Utils.register_process(:output, Output.start())
+    input_pid = Utils.register_process(:input, Input.start(workers))
 
-    loop()
+    wait_for_exit(Enum.concat(workers, [input_pid]))
   end
 
-  defp loop() do
-    loop()
+  defp wait_for_exit(track_pids) do
+    if Enum.all?(track_pids, fn pid -> Process.alive?(pid) end) do
+      wait_for_exit(track_pids)
+    end
   end
 end

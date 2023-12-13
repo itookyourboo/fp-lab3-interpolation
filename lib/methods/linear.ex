@@ -42,7 +42,7 @@ defmodule Interpolation.Method.Linear do
   end
 
   defp process_message({:stop, _, _}, _) do
-    System.stop()
+    Process.exit(0, :ok)
   end
 
   defp process_message(msg, state) do
