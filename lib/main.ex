@@ -7,29 +7,27 @@ defmodule Interpolation.Main do
   alias Interpolation.Utils
 
   @methods %{
-    "linear" => {:linear, Linear},
-    "lagrange" => {:lagrange, Lagrange},
-    "gauss" => {:gauss, Gauss}
+    "linear" => Linear,
+    "lagrange" => Lagrange,
+    "gauss" => Gauss
   }
 
   def start(methods, window, frequency) do
-    Utils.register_process(:output, Output.start())
+    output_pid = Utils.register_process(Output.start())
 
     workers =
       methods
       |> Enum.filter(&Map.has_key?(@methods, &1))
       |> Enum.map(&Map.get(@methods, &1))
-      |> Enum.map(fn {method, mod} ->
-        Utils.register_process(method, mod.start(window, frequency))
-      end)
+      |> Enum.map(&Utils.register_process(&1.start(window, frequency, output_pid)))
 
-    input_pid = Utils.register_process(:input, Input.start(workers))
+    input_pid = Utils.register_process(Input.start(workers))
 
     wait_for_exit(Enum.concat(workers, [input_pid]))
   end
 
   defp wait_for_exit(track_pids) do
-    if Enum.all?(track_pids, fn pid -> Process.alive?(pid) end) do
+    if Enum.any?(track_pids, fn pid -> Process.alive?(pid) end) do
       wait_for_exit(track_pids)
     end
   end

@@ -4,8 +4,10 @@ defmodule Interpolation.Method.Linear do
   @method_name "Linear interpolation"
   @window_size 2
 
-  def start(_window, frequency) do
-    spawn(fn -> loop(state(frequency)) end)
+  def start(_window, frequency, output_pid) do
+    spawn(fn ->
+      loop({@window_size, frequency, [], output_pid})
+    end)
   end
 
   defp interpolate(frequency, [[x1, y1], [x2, y2]]) do
@@ -27,22 +29,22 @@ defmodule Interpolation.Method.Linear do
     loop(new_state)
   end
 
-  defp process_message({:new_point, point, _}, {frequency, points}) do
-    points = Utils.push_point(points, point, @window_size)
+  defp process_message({:new_point, point, _}, {window, frequency, points, output_pid}) do
+    points = Utils.push_point(points, point, window)
 
-    if length(points) == @window_size do
-      send(:output, {
+    if length(points) == window do
+      send(output_pid, {
         :result,
         {@method_name, interpolate(frequency, points)},
         self()
       })
     end
 
-    state(frequency, points)
+    {window, frequency, points, output_pid}
   end
 
   defp process_message({:stop, _, _}, _) do
-    Process.exit(0, :ok)
+    Process.exit(self(), :normal)
   end
 
   defp process_message(msg, state) do
@@ -50,6 +52,4 @@ defmodule Interpolation.Method.Linear do
 
     state
   end
-
-  defp state(frequency, points \\ []), do: {frequency, points}
 end

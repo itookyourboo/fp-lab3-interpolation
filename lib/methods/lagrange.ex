@@ -3,8 +3,10 @@ defmodule Interpolation.Method.Lagrange do
 
   @method_name "Lagrange interpolation"
 
-  def start(window, frequency) do
-    spawn(fn -> loop(state(window, frequency)) end)
+  def start(window, frequency, output_pid) do
+    spawn(fn ->
+      loop({window, frequency, [], output_pid})
+    end)
   end
 
   defp interpolate(frequency, points) do
@@ -48,22 +50,22 @@ defmodule Interpolation.Method.Lagrange do
     loop(new_state)
   end
 
-  defp process_message({:new_point, point, _}, {window, frequency, points}) do
+  defp process_message({:new_point, point, _}, {window, frequency, points, output_pid}) do
     points = Utils.push_point(points, point, window)
 
     if length(points) == window do
-      send(:output, {
+      send(output_pid, {
         :result,
         {@method_name, interpolate(frequency, points)},
         self()
       })
     end
 
-    state(window, frequency, points)
+    {window, frequency, points, output_pid}
   end
 
   defp process_message({:stop, _, _}, _) do
-    Process.exit(0, :ok)
+    Process.exit(self(), :normal)
   end
 
   defp process_message(msg, state) do
@@ -71,6 +73,4 @@ defmodule Interpolation.Method.Lagrange do
 
     state
   end
-
-  defp state(window, frequency, points \\ []), do: {window, frequency, points}
 end

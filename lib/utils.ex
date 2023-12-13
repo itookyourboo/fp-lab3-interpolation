@@ -7,9 +7,8 @@ defmodule Interpolation.Utils do
     )
   end
 
-  def register_process(name, pid) do
+  def register_process(pid) do
     Process.link(pid)
-    Process.register(pid, name)
     pid
   end
 
