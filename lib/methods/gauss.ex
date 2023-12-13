@@ -4,6 +4,7 @@ defmodule Interpolation.Method.Gauss do
 
   @method_name "Gauss interpolation"
 
+  @spec start(any(), any()) :: pid()
   def start(window, frequency) do
     spawn(fn -> loop(state(window, frequency)) end)
   end
@@ -75,14 +76,22 @@ defmodule Interpolation.Method.Gauss do
     loop(new_state)
   end
 
-  defp process_message({:process_point, point, sender}, {window, frequency, points}) do
+  defp process_message({:new_point, point, _}, {window, frequency, points}) do
     points = Utils.push_point(points, point, window)
 
     if length(points) == window do
-      send(sender, {:result, {@method_name, interpolate(frequency, points)}, self()})
+      send(:output, {
+        :result,
+        {@method_name, interpolate(frequency, points)},
+        self()
+      })
     end
 
     state(window, frequency, points)
+  end
+
+  defp process_message({:stop, _, _}, _) do
+    System.stop()
   end
 
   defp process_message(msg, state) do

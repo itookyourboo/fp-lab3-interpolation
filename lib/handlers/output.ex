@@ -1,17 +1,15 @@
 defmodule Interpolation.Handler.Output do
   alias Interpolation.Utils
 
-  def start() do
-    spawn(&loop/0)
+  def start do
+    spawn(fn -> loop() end)
   end
 
   defp loop do
     receive do
-      {:print, item, _} ->
-        print(item)
-
-      {:table, item, _} ->
-        print_table(item)
+      {:result, {name, table}, _} ->
+        print(name)
+        print_table(table)
 
       msg ->
         Utils.log_unexpected_message(msg)

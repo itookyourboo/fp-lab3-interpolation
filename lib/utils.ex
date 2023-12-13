@@ -10,6 +10,7 @@ defmodule Interpolation.Utils do
   def register_process(name, pid) do
     Process.link(pid)
     Process.register(pid, name)
+    pid
   end
 
   def float_range(first, last, step) do

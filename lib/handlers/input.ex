@@ -1,39 +1,29 @@
 defmodule Interpolation.Handler.Input do
-  @input_handler :line
-
-  def start(listener) do
-    spawn(fn -> loop(listener) end)
+  def start(listeners) do
+    spawn(fn -> loop(listeners) end)
   end
 
-  defp loop(listener) do
-    case @input_handler do
-      :line -> line_handler(listener)
-      :stream -> stream_handler(listener)
-    end
-  end
-
-  defp line_handler(listener) do
+  defp loop(listeners) do
     line = IO.gets("")
-    process_line(line, listener)
+    process_line(line, listeners)
 
     if line != :eof do
-      line_handler(listener)
+      loop(listeners)
     end
   end
 
-  defp stream_handler(listener) do
-    IO.stream()
-    |> Stream.each(&process_line(&1, listener))
-    |> Stream.run()
+  defp process_line(:eof, listeners) do
+    Enum.each(listeners, fn pid ->
+      send(pid, {:stop, nil, self()})
+    end)
   end
 
-  defp process_line(:eof, listener) do
-    send(listener, {:stop, nil, self()})
-  end
-
-  defp process_line(line, listener) do
+  defp process_line(line, listeners) do
     point = line_to_point(line)
-    send(listener, {:new_point, point, self()})
+
+    Enum.each(listeners, fn pid ->
+      send(pid, {:new_point, point, self()})
+    end)
   end
 
   defp line_to_point(line) do
